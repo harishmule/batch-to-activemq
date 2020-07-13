@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+
+	<flow name="batchToActivemq"
+		doc:id="2456daae-fdf7-4425-8283-8799f22a896d">
+		<http:listener doc:name="HTTPS Listener"
+			doc:id="f6ddc1f7-0b71-435b-a8c7-0dc46e9965a2"
+			config-ref="HTTP_Listener_config" path="/flights" />
+		<http:request method="GET" doc:name="HTTPS Request"
+			doc:id="02c4ce00-59cd-4874-9bd7-ba547b513689"
+			config-ref="HTTP_Request_configuration" path="/api/flights" />
+		<logger level="INFO" doc:name="Payload"
+			doc:id="949c768a-4c6e-4717-b08d-a0a196a022b4" message="#[payload]" />
+		<batch:job jobName="batchBatch_Job"
+			doc:id="2c008532-6272-464b-8d49-de1552021442">
+			<batch:process-records>
+				<batch:step name="Batch_Step"
+					doc:id="7a82e2b1-2612-447e-9c99-c4bb94abf59a">
+					<ee:transform doc:name="Payload Trasforming to json"
+						doc:id="da511a75-e65e-4a74-aa41-0349e29a9e5d">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<jms:publish doc:name="Publish to MQ"
+						doc:id="6b216637-c992-4a13-a538-e9ed9acd9b7f"
+						config-ref="JMS_Config" destination="batch" />
+				</batch:step>
+			</batch:process-records>
+		</batch:job>
+		<ee:transform doc:name="Final Payload from Batch"
+			doc:id="32fe7a6d-f98f-4ceb-b51c-db0af32fcce2">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
